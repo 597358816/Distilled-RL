@@ -2,9 +2,12 @@
 # Distilled Reinforcement Learning for LLM Post-Training
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2607.17247"><b>Paper</b></a>
-  &nbsp;|&nbsp;
-  <a href="https://github.com/597358816/Distilled-RL"><b>Code</b></a>
+  <a href="https://arxiv.org/abs/2607.17247">
+    <img src="https://img.shields.io/badge/arXiv-2607.17247-b31b1b.svg" alt="arXiv">
+  </a>
+  <a href="https://github.com/597358816/Distilled-RL">
+    <img src="https://img.shields.io/badge/Code-GitHub-black.svg" alt="GitHub">
+  </a>
 </p>
 
 This repository contains the implementation of **Distilled Reinforcement Learning (Distilled RL)**, a unified post-training framework that integrates teacher supervision directly into the reinforcement learning objective.
@@ -25,89 +28,109 @@ Distilled RL consists of three components:
 
 ## Method
 
-Given a prompt \(q\) and a student-generated response \(o_i\), we first compute the standard policy ratio
+Given a prompt $q$ and a response $o_i$ sampled from the old student policy, the standard policy ratio is
 
-$
+```math
 r_{i,t}(\theta)
 =
 \frac{
-\pi_\theta(o_{i,t}\mid q,o_{i,<t})
+\pi_{\theta}(o_{i,t} \mid q, o_{i,1:t-1})
 }{
-\pi_{\theta_{\mathrm{old}}}(o_{i,t}\mid q,o_{i,<t})
+\pi_{\mathrm{old}}(o_{i,t} \mid q, o_{i,1:t-1})
+}
+```
+
+The response-level advantage is estimated using group-normalized rewards:
+
+```math
+A_i
+=
+\frac{
+R_i - \mathrm{mean}(\{R_j\}_{j=1}^{G})
+}{
+\mathrm{std}(\{R_j\}_{j=1}^{G})
 }.
-$
+```
 
-The teacher-to-student importance ratio is defined as
+### Reverse Importance Sampling
 
-$
+We measure the teacher's relative preference for each student-generated token using
+
+```math
 \rho_{i,t}
 =
 \frac{
-\pi_{\mathrm{teacher}}(o_{i,t}\mid q,o_{i,<t})
+\pi_{\mathrm{teacher}}(o_{i,t} \mid q, o_{i,1:t-1})
 }{
-\pi_{\theta_{\mathrm{old}}}(o_{i,t}\mid q,o_{i,<t})
+\pi_{\theta_{\mathrm{old}}}(o_{i,t} \mid q, o_{i,1:t-1})
 }.
-$
+```
 
-To avoid extreme teacher–student likelihood ratios, we apply symmetric clipping:
+To prevent extreme teacher–student likelihood ratios, we apply symmetric clipping:
 
-$
+```math
 \bar{\rho}_{i,t}
 =
-\operatorname{clip}
+\mathrm{clip}
 \left(
 \rho_{i,t},
-\frac{1}{\epsilon_\rho},
-\epsilon_\rho
+\epsilon_{\rho}^{-1},
+\epsilon_{\rho}
 \right).
-$
+```
 
 ### Sequence-Level Geometric Normalization
 
 The clipped ratios are normalized within each response:
 
-$
+```math
 \widetilde{\rho}_{i,t}
 =
 \frac{
 \bar{\rho}_{i,t}
 }{
-\exp\left(
+\exp
+\left(
 \frac{1}{|o_i|}
 \sum_{s=1}^{|o_i|}
 \log \bar{\rho}_{i,s}
 \right)
 }.
-$
+```
 
-This ensures
+The normalized ratios satisfy
 
-$
+```math
 \left(
 \prod_{t=1}^{|o_i|}
 \widetilde{\rho}_{i,t}
 \right)^{1/|o_i|}
-=1,
-$
+=
+1.
+```
 
-which removes the mean shift of the importance ratios in log space while retaining the teacher's relative token preferences.
+This normalization removes the sequence-level mean shift in log importance ratios while preserving the teacher's relative preferences across tokens.
 
 ### Negative Sample Reset
 
-Teacher guidance is applied only to positive-advantage trajectories:
+Teacher guidance is applied only to positive-advantage responses:
 
-$
+```math
 w_{i,t}
 =
 \begin{cases}
-\widetilde{\rho}_{i,t}, & A_i > 0,\\
+\widetilde{\rho}_{i,t}, & A_i > 0, \\
 1, & A_i \leq 0.
 \end{cases}
-$
+```
 
-The resulting Distilled RL objective is
+For negative-advantage responses, the update reduces to the original RL objective.
 
-$
+### Distilled RL Objective
+
+For responses sampled from the old student policy, the final policy optimization objective is
+
+```math
 \mathcal{J}_{\mathrm{DistilledRL}}(\theta)
 =
 \mathbb{E}
@@ -118,19 +141,26 @@ $
 \sum_{t=1}^{|o_i|}
 \min
 \left(
-r_{i,t}(\theta)w_{i,t}A_i,
-\operatorname{clip}
+r_{i,t}(\theta) w_{i,t} A_i,
+\hat{r}_{i,t}(\theta) w_{i,t} A_i
+\right)
+\right],
+```
+
+where the clipped policy ratio is
+
+```math
+\hat{r}_{i,t}(\theta)
+=
+\mathrm{clip}
 \left(
 r_{i,t}(\theta),
 1-\epsilon_{\mathrm{low}},
 1+\epsilon_{\mathrm{high}}
-\right)
-w_{i,t}A_i
-\right)
-\right].
-$
+\right).
+```
 
-Unlike KL-based on-policy distillation, the teacher is not treated as an unconditional imitation target. Instead, it acts as a selective token-level guide inside the reward-driven policy-gradient objective.
+Unlike KL-based on-policy distillation, Distilled RL does not treat the teacher as an unconditional imitation target. Instead, the teacher selectively redistributes the reward-driven policy-gradient signal at the token level.
 
 ## Main Results
 
