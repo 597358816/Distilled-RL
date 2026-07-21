@@ -17,12 +17,12 @@ Standard reinforcement learning relies on coarse-grained outcome rewards, while 
 ## Overview
 
 <p align="center">
-  <img src="overview.png" width="95%" alt="Overview of Distilled RL">
+  <img src="distilled-RL-main.png" width="95%" alt="Overview of Distilled RL">
 </p>
 
 Distilled RL consists of three components:
 
-1. **Reverse importance sampling with clipping**, which measures the teacher's relative preference for each student-generated token.
+1. **Reverse importance sampling**, which measures the teacher's relative preference for each student-generated token.
 2. **Negative sample reset**, which disables teacher reweighting on negative-advantage trajectories.
 3. **Sequence-level geometric normalization**, which removes sequence-level scale bias while preserving relative token preferences.
 
@@ -174,21 +174,6 @@ We evaluate Distilled RL on three student models using Qwen3-8B-GRPO as the teac
 
 Distilled RL consistently improves over standard RL, OPD, and their direct combination across different student scales and teacher–student settings.
 
-## Training Setup
-
-- **Teacher:** Qwen3-8B-GRPO
-- **Students:**
-  - DeepSeek-R1-Distill-Qwen-1.5B
-  - Qwen3-1.7B
-  - Qwen3-4B
-- **Training dataset:** DAPO-17K
-- **RL algorithm:** GRPO
-- **Rollout group size:** 8
-- **Maximum response length:** 8192
-- **Teacher ratio clipping threshold:** \(\epsilon_\rho=3\)
-
-The implementation is built on top of [EasyR1](https://github.com/hiyouga/EasyR1) and [VeRL](https://github.com/volcengine/verl).
-
 ## Requirements
 
 ### Software
@@ -208,4 +193,6 @@ pip install ray==2.48.0 tensordict==0.9.1 pydantic==2.11.7
 pip install flash-attn
 pip install -e .
 pip install tensorboard
+cd examples
+bash XX.sh
 ```
