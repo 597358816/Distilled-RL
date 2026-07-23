@@ -9,7 +9,7 @@ FORMAT_PROMPT="""You FIRST think about the reasoning process as an internal mono
 /vepfs-mlp2/c20250203/250602012/Anaconda/envs/easyr1/bin/python -m verl.trainer.main \
     config=config.yaml \
     worker.actor.model.model_path="${MODEL_PATH}" \
-    data.train_files=/vepfs-mlp2/c20250203/250602012/data/train_dapo.parquet \
+    data.train_files=./train_dapo.parquet \
     data.max_response_length=8192 \
     data.rollout_batch_size=128 \
     data.format_prompt="${FORMAT_PROMPT}" \
